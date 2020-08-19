@@ -1,0 +1,169 @@
+-- Use Atom plugin command below or paste decker.ttslua code there
+#include Decker
+
+-- THE UTILITY ZOAN
+function trim(s)
+   return s:match'^%s*(.*%S)' or ''
+end
+
+-- Check if string begins with the argument (no regex)
+string.beginswith = function(str, prefix)
+    return (str:sub(1, prefix:len()) == prefix)
+end
+string.startswith = string.beginswith
+
+-- Global deck of all cards in Classic (1x each), in correct order so we can use index order as ID
+-- Turns out the deck is too massive to persist this way!
+classicDeck = {}
+
+-- Ok, let's just save the assets and rebuild the deck on load. np, right?
+allAssets = {}
+
+
+-- args is a table of strings
+function echo(args)
+    for _, v in pairs(args) do print(v) end
+end
+
+function makeAssets(args)
+    -- Width or height must be less than 10k pixels
+    local width = 10
+    local height = 7
+    local cardBack = 'https://drive.google.com/uc?export=download&id=' .. '1FJFIEYguHCH7NiAnXocjocWgytFgeCWU'
+
+    local assets = {}
+    for page, fileid in ipairs(args) do
+        -- local page = tonumber(page)
+        local cardFaces = 'https://drive.google.com/uc?export=download&id=' .. fileid
+        local pageAsset = Decker.Asset(cardFaces, cardBack, {width = width, height = height, name = "classic page "..page})
+        assets[page] = pageAsset
+    end
+    return assets
+end
+
+function makeClassic()
+    local allCards = {}
+    for page, asset in ipairs(allAssets) do
+        local pageDeck = Decker.AssetDeck(asset, nil)
+        for idx, _ in pairs(pageDeck.data.ContainedObjects) do
+            local card = pageDeck:cardAt(idx)
+            allCards[#allCards+1] = card
+        end
+    end
+    return Decker.Deck(allCards, {})
+end
+
+function updateClassic(args)
+    -- print("Using hardcoded fileids to save typing")
+    -- local args = {
+    --     [1] = "1-ONqEoHcyBGI18qmaCuzBkN9qTo_DVkF",
+    --     [2] = "1n_nk3oPcGT6Ckd46SnFp6sdpjilRhFGN"
+    -- }
+    print("Update the assets")
+    allAssets = makeAssets(args)
+
+    print("Update Classic Deck")
+    classicDeck = makeClassic()
+
+    print("Spawning Classic Deck for convenience (use spawn.classic to just get fresh copies)")
+    spawnClassic({})
+end
+
+function spawnClassic(args)
+    classicDeck:spawn({position = {0,0,0}, rotation = {0, 0, 180}})
+end
+
+
+-- Make a Decker.Deck by pulling cards from the Classic deck based on the decklist
+function buildDeck(decklist, options)
+    local cards = {}
+    local options = options or {}
+    for idx, entry in ipairs(decklist) do
+      for i=1,entry.qty do
+        cards[#cards+1] = classicDeck:cardAt(tonumber(entry.id)+1):setCommon(options)
+      end
+    end
+
+    print(#cards)
+
+    return Decker.Deck(cards, options)
+end
+
+-- Given a deck name, request JSON and spawn the deck based on that JSON
+function spawnDeck(args)
+    local deckName = args[1]
+    local url = "https://skypirate-deckgen.herokuapp.com/decks/"..deckName.."/export"
+
+    function callback(webReturn)
+        local parsed = JSON.decode(webReturn.text)
+        local newDeck = buildDeck(parsed, {name = deckName})
+        newDeck:spawn({position = {0, 0, 0}})
+    end
+
+    WebRequest.get(url, callback)
+end
+
+function help(args)
+    local allCommands = ""
+    for cmd,_ in pairs(chatCommands) do
+        allCommands = allCommands..chatCommandPrefix..cmd.."|"
+    end
+    print(allCommands)
+end
+
+-- Event Handlers
+chatCommands =  {
+    ["echo"] = echo,
+    ["help"] = help,
+    ["update"] = updateClassic,
+    ["spawn.classic"] = spawnClassic,
+    ["spawn.deck"] = spawnDeck
+}
+chatCommandPrefix = "."
+
+function onChat(msg)
+    -- parse command if it begins with control char
+    if(string.beginswith(msg, chatCommandPrefix)) then
+        -- extract the command
+        -- local cmd = string.match(msg, "%"..chatCommandPrefix.."([^ ]*)[ ]?")
+        local cmd, argString = msg:match("%"..chatCommandPrefix.."([^ ]*)[ ]?(.*)")
+
+        -- get the function to run
+        local func = chatCommands[cmd]
+
+        -- get the args (whatever's left over)
+        -- local argString = trim(msg:gsub(chatCommandPrefix..cmd.." ", "")) or ""
+
+        -- break the args (on comma) into a table of individual args
+        local args = {}
+        for word in argString:gmatch("[^,]+") do args[#args+1] = word end
+
+        -- run the function
+        if(func) then
+            func(args)
+        else
+            print("The command "..cmd.." is not recognized")
+        end
+    end
+end
+
+function onSave()
+    local saved_data = JSON.encode(allAssets)
+    return saved_data
+end
+
+function onLoad(saved_data)
+    broadcastToAll('Use commands in chat. Use '..chatCommandPrefix..'help to see options.', {1, 1, 1})
+
+    -- Load the persisted assets
+    if saved_data ~= "" then
+        print("classic assets loaded")
+        local loaded_data = JSON.decode(saved_data)
+        allAssets = loaded_data
+        print("make Classic deck")
+        classicDeck = makeClassic()
+    else
+        print("assets were not loaded")
+        allAssets = {}
+    end
+end
