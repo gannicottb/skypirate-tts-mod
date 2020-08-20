@@ -19,7 +19,6 @@ classicDeck = {}
 -- Ok, let's just save the assets and rebuild the deck on load. np, right?
 allAssets = {}
 
-
 -- args is a table of strings
 function echo(args)
     for _, v in pairs(args) do print(v) end
@@ -54,18 +53,13 @@ function makeClassic()
 end
 
 function updateClassic(args)
-    -- print("Using hardcoded fileids to save typing")
-    -- local args = {
-    --     [1] = "1-ONqEoHcyBGI18qmaCuzBkN9qTo_DVkF",
-    --     [2] = "1n_nk3oPcGT6Ckd46SnFp6sdpjilRhFGN"
-    -- }
-    print("Update the assets")
+    print("Updating the assets...")
     allAssets = makeAssets(args)
 
-    print("Update Classic Deck")
+    print("Updating Classic Deck...")
     classicDeck = makeClassic()
 
-    print("Spawning Classic Deck for convenience (use spawn.classic to just get fresh copies)")
+    print("Spawning Classic Deck for convenience (use "..chatCommandPrefix.."spawn.classic to just get fresh copies)")
     spawnClassic({})
 end
 
@@ -104,43 +98,40 @@ function spawnDeck(args)
 end
 
 function help(args)
-    local allCommands = ""
-    for cmd,_ in pairs(chatCommands) do
-        allCommands = allCommands..chatCommandPrefix..cmd.."|"
+    print("HELP:")
+    for cmdName,cmd in pairs(chatCommands) do
+        print("---")
+        print(chatCommandPrefix..cmdName.." "..cmd.description)
     end
-    print(allCommands)
 end
 
 -- Event Handlers
-chatCommands =  {
-    ["echo"] = echo,
-    ["help"] = help,
-    ["update"] = updateClassic,
-    ["spawn.classic"] = spawnClassic,
-    ["spawn.deck"] = spawnDeck
-}
 chatCommandPrefix = "."
+chatCommandArgDelimiter = " "
+chatCommands =  {
+    ["spawn.classic"] = { func = spawnClassic, description = "-> Spawns a Classic deck." },
+    ["spawn.deck"] = { func = spawnDeck, description = "DeckName".." -> Spawns a deck based on deck name from DeckGen server." },
+    ["update"] = { func = updateClassic, description = "pageOneFileId"..chatCommandArgDelimiter.."pageTwoFileId -> Update cached Classic set." },
+    ["help"] = { func = help, description = "-> This list of descriptions." },
+    ["echo"] = { func = echo, description = "hi"..chatCommandArgDelimiter.."you".." -> hi\nyou" },
+}
 
 function onChat(msg)
     -- parse command if it begins with control char
     if(string.beginswith(msg, chatCommandPrefix)) then
         -- extract the command
-        -- local cmd = string.match(msg, "%"..chatCommandPrefix.."([^ ]*)[ ]?")
-        local cmd, argString = msg:match("%"..chatCommandPrefix.."([^ ]*)[ ]?(.*)")
+        local cmdName, argString = msg:match("%"..chatCommandPrefix.."([^ ]*)[ ]?(.*)")
 
         -- get the function to run
-        local func = chatCommands[cmd]
-
-        -- get the args (whatever's left over)
-        -- local argString = trim(msg:gsub(chatCommandPrefix..cmd.." ", "")) or ""
+        local command = chatCommands[cmdName]
 
         -- break the args (on comma) into a table of individual args
         local args = {}
-        for word in argString:gmatch("[^,]+") do args[#args+1] = word end
+        for word in argString:gmatch("[^%"..chatCommandArgDelimiter.."]+") do args[#args+1] = word end
 
         -- run the function
-        if(func) then
-            func(args)
+        if(command.func) then
+            command.func(args)
         else
             print("The command "..cmd.." is not recognized")
         end
