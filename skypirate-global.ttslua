@@ -63,6 +63,17 @@ function updateClassic(args)
     spawnClassic({})
 end
 
+function autoUpdateClassic(args)
+    local url = "https://skypirate-deckgen.herokuapp.com/api/card_sheets"
+    function callback(webReturn)
+        local parsed = JSON.decode(webReturn.text)
+        for page, fid in ipairs(parsed) do print("Page "..page..": "..fid) end
+        updateClassic(parsed)
+    end
+
+    WebRequest.get(url, callback)
+end
+
 function spawnClassic(args)
     classicDeck:spawn({position = {0,0,0}, rotation = {0, 0, 180}})
 end
@@ -78,20 +89,20 @@ function buildDeck(decklist, options)
       end
     end
 
-    print(#cards)
-
     return Decker.Deck(cards, options)
 end
 
 -- Given a deck name, request JSON and spawn the deck based on that JSON
 function spawnDeck(args)
-    local deckName = args[1]
-    local url = "https://skypirate-deckgen.herokuapp.com/decks/"..deckName.."/export"
+    local deckFileId = args[1]
+    local url = "https://skypirate-deckgen.herokuapp.com/api/decks/"..deckFileId
 
     function callback(webReturn)
         local parsed = JSON.decode(webReturn.text)
-        local newDeck = buildDeck(parsed, {name = deckName})
+        local newDeck = buildDeck(parsed["cards"], {name = parsed["name"]})
+        print(parsed["name"].." fetched and built. Spawning...")
         newDeck:spawn({position = {0, 0, 0}})
+        print(parsed["name"].." spawned!")
     end
 
     WebRequest.get(url, callback)
@@ -110,8 +121,9 @@ chatCommandPrefix = "."
 chatCommandArgDelimiter = " "
 chatCommands =  {
     ["spawn.classic"] = { func = spawnClassic, description = "-> Spawns a Classic deck." },
-    ["spawn.deck"] = { func = spawnDeck, description = "DeckName".." -> Spawns a deck based on deck name from DeckGen server." },
-    ["update"] = { func = updateClassic, description = "pageOneFileId"..chatCommandArgDelimiter.."pageTwoFileId -> Update cached Classic set." },
+    ["spawn.deck"] = { func = spawnDeck, description = "DeckId".." -> Spawns a deck based on deck id from DeckGen server." },
+    ["update.manual"] = { func = updateClassic, description = "pageOneFileId"..chatCommandArgDelimiter.."pageTwoFileId -> Update cached Classic set." },
+    ["update"] = { func = autoUpdateClassic, description = "-> Update cached Classic set based on skypirate-deckgen.herokuapp.com/api/classic_sheets."},
     ["help"] = { func = help, description = "-> This list of descriptions." },
     ["echo"] = { func = echo, description = "hi"..chatCommandArgDelimiter.."you".." -> hi\nyou" },
 }
@@ -144,17 +156,18 @@ function onSave()
 end
 
 function onLoad(saved_data)
-    broadcastToAll('Use commands in chat. Use '..chatCommandPrefix..'help to see options.', {1, 1, 1})
-
     -- Load the persisted assets
     if saved_data ~= "" then
-        print("classic assets loaded")
+        print("Classic assets loaded from save.")
         local loaded_data = JSON.decode(saved_data)
+        print("Classic assets parsed from JSON and set.")
         allAssets = loaded_data
-        print("make Classic deck")
+
         classicDeck = makeClassic()
+        print("Classic deck set. Mod ready!")
     else
-        print("assets were not loaded")
+        print("Classic assets were not found in save. Run "..chatCommandPrefix.."update")
         allAssets = {}
     end
+    broadcastToAll('Use commands in chat. Use '..chatCommandPrefix..'help to see options.', {1, 1, 1})
 end
