@@ -481,9 +481,17 @@ function autoUpdateClassic(args, player)
     WebRequest.get(url, callback)
 end
 
+-- Do vector math to get a location in about the middle of the player's play area
+function getSpawnLocation(player)
+    local handZone = Player[player.color]:getHandTransform()
+    local spawnLocation = handZone['position'] + handZone['forward'] * 25
+    return {spawnLocation.x, spawnLocation.y, spawnLocation.z}
+end
+
 -- Spawn the currently built copy of classic
 function spawnClassic(args, player)
-    classicDeck:spawn({position = {0,0,0}, rotation = {0, 0, 180}})
+    local spawnLocation = getSpawnLocation(player)
+    classicDeck:spawn({position = spawnLocation, rotation = {0, 0, 180}})
     printToAll("New copy of Classic spawned!")
 end
 
@@ -496,7 +504,8 @@ function spawnDeck(args, player)
         local parsed = JSON.decode(webReturn.text)
         local newDeck = buildDeck(parsed["cards"], {name = parsed["name"]})
         printToAll(parsed["name"].." fetched and built.", Color.fromString(player.color))
-        newDeck:spawn({position = {0, 0, 0}})
+        local spawnLocation = getSpawnLocation(player)
+        newDeck:spawn({position = spawnLocation, rotation = {0, 0, 180}})
         printToAll(parsed["name"].." spawned!", Color.fromString(player.color))
     end
 
@@ -546,7 +555,7 @@ function onChat(msg, player)
         if(command.func) then
             command.func(args, player)
         else
-            printToAll("The command "..cmd.." is not recognized")
+            printToColor("The command "..cmd.." is not recognized", player.color)
         end
         return false -- suppress the command from showing up in chat.
     end
