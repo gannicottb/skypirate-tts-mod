@@ -135,11 +135,11 @@ do
     deepcopy = function(t)
         local copy = {}
         for k,v in pairs(t) do
-           if type(v) == 'table' then
-               copy[k] = deepcopy(v)
-           else
-               copy[k] = v
-           end
+            if type(v) == 'table' then
+                copy[k] = deepcopy(v)
+            else
+                copy[k] = v
+            end
         end
         return copy
     end
@@ -399,7 +399,7 @@ end
 
 -- THE UTILITY ZOAN
 function trim(s)
-   return s:match'^%s*(.*%S)' or ''
+    return s:match'^%s*(.*%S)' or ''
 end
 
 -- Check if string begins with the argument (no regex)
@@ -423,7 +423,7 @@ function makeAssets(args)
     local assets = {}
     for page, entry in ipairs(args) do
         local cardFaces = 'https://drive.google.com/uc?export=download&id=' .. entry.fileId
-        local pageAsset = Decker.Asset(cardFaces, cardBack, {width = width, height = height, name = "classic page "..page})
+        local pageAsset = Decker.Asset(cardFaces, cardBack, {width = width, height = height, name = "classic page "..page, hiddenBack = true})
         assets[page] = {numCards = entry.count, asset = pageAsset}
     end
     return assets
@@ -434,9 +434,9 @@ function buildDeck(decklist, options)
     local cards = {}
     local options = options or {}
     for idx, entry in ipairs(decklist) do
-      for i=1,entry.qty do
-        cards[#cards+1] = classicDeck:cardAt(tonumber(entry.id)+1):setCommon(options)
-      end
+        for i=1,entry.qty do
+            cards[#cards+1] = classicDeck:cardAt(tonumber(entry.id)+1):setCommon(options)
+        end
     end
 
     return Decker.Deck(cards, options)
