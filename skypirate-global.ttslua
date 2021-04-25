@@ -484,14 +484,27 @@ end
 -- Do vector math to get a location in about the middle of the player's play area
 function getSpawnLocation(player)
     local handZone = Player[player.color]:getHandTransform()
-    local spawnLocation = handZone['position'] + handZone['forward'] * 25
+    local spawnLocation = handZone['position'] + handZone['forward'] * 15
     return {spawnLocation.x, spawnLocation.y, spawnLocation.z}
+end
+-- red: 0,0,1  -27, 4, -21
+-- green 0,0,1 -26, 4, 23
+-- blue 0,0,1, 33, 4, 23
+-- white 0,0,1 31, 4, -21
+function getSpawnRotation(player)
+    local handZone = Player[player.color]:getHandTransform()
+    if(handZone['position'].z < 0) then
+        return {0, 180, 180} -- white/red
+    else
+        return {0, 0, 180} -- green/blue
+    end
 end
 
 -- Spawn the currently built copy of classic
 function spawnClassic(args, player)
     local spawnLocation = getSpawnLocation(player)
-    classicDeck:spawn({position = spawnLocation, rotation = {0, 0, 180}})
+    local spawnRotation = getSpawnRotation(player)
+    classicDeck:spawn({position = spawnLocation, rotation = spawnRotation})
     printToAll("New copy of Classic spawned!")
 end
 
@@ -505,7 +518,8 @@ function spawnDeck(args, player)
         local newDeck = buildDeck(parsed["cards"], {name = parsed["name"]})
         printToAll(parsed["name"].." fetched and built.", Color.fromString(player.color))
         local spawnLocation = getSpawnLocation(player)
-        newDeck:spawn({position = spawnLocation, rotation = {0, 0, 180}})
+        local spawnRotation = getSpawnRotation(player)
+        newDeck:spawn({position = spawnLocation, rotation = spawnRotation})
         printToAll(parsed["name"].." spawned!", Color.fromString(player.color))
     end
 
