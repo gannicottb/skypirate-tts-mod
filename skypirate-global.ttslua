@@ -418,7 +418,8 @@ function makeAssets(args)
     -- Width or height must be less than 10k pixels
     local width = 10
     local height = 7
-    local cardBack = 'https://drive.google.com/uc?export=download&id=' .. '1FJFIEYguHCH7NiAnXocjocWgytFgeCWU'
+    --local cardBack = 'https://drive.google.com/uc?export=download&id=' .. '1FJFIEYguHCH7NiAnXocjocWgytFgeCWU'
+    local cardBack = 'https://drive.google.com/uc?export=download&id=' .. '1Ez4cfVxq8cfayLZe5MTsoahui2_AXKVg'
 
     local assets = {}
     for page, entry in ipairs(args) do
@@ -484,7 +485,7 @@ end
 -- Do vector math to get a location in about the middle of the player's play area
 function getSpawnLocation(player)
     local handZone = Player[player.color]:getHandTransform()
-    local spawnLocation = handZone['position'] + handZone['forward'] * 15
+    local spawnLocation = handZone['position'] + handZone['forward'] * 10
     return {spawnLocation.x, spawnLocation.y, spawnLocation.z}
 end
 -- red: 0,0,1  -27, 4, -21
